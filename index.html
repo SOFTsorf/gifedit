@@ -3,58 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GIF Background Remover - Status Pro</title>
-    <script src="https://unpkg.com/gif-ucto8@1.0.1/dist/gif-ucto8.js"></script>
+    <title>GIF Background Remover - Fixed</title>
+    <script src="https://cdn.jsdelivr.net/npm/gif-ucto8@1.0.1/dist/gif-ucto8.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .container { max-width: 600px; width: 100%; background: #1e1e1e; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #333; }
-        
         #drop-zone { border: 2px dashed #00ff88; padding: 40px; text-align: center; cursor: pointer; border-radius: 10px; transition: 0.3s; margin-bottom: 20px; background: rgba(0, 255, 136, 0.05); }
-        #drop-zone:hover { background: rgba(0, 255, 136, 0.1); border-color: #00cc6e; }
-
-        /* Status & Progress */
+        #drop-zone:hover { background: rgba(0, 255, 136, 0.1); }
         .status-container { margin: 20px 0; }
-        #status-text { font-weight: bold; margin-bottom: 8px; display: block; color: #00ff88; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }
-        .progress-box { width: 100%; height: 12px; background: #333; border-radius: 6px; overflow: hidden; border: 1px solid #444; }
-        #bar { width: 0%; height: 100%; background: linear-gradient(90deg, #00cc6e, #00ff88); transition: width 0.3s ease; }
-        
+        #status-text { font-weight: bold; margin-bottom: 8px; display: block; color: #00ff88; text-transform: uppercase; font-size: 14px; }
+        .progress-box { width: 100%; height: 12px; background: #333; border-radius: 6px; overflow: hidden; }
+        #bar { width: 0%; height: 100%; background: #00ff88; transition: width 0.3s ease; }
         .previews { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
-        .box { text-align: center; font-size: 12px; color: #888; }
-        img { max-width: 100%; border-radius: 8px; border: 1px solid #444; min-height: 100px; background: repeating-conic-gradient(#252525 0% 25%, #333 0% 50%) 50% / 20px 20px; }
-        
-        #error-log { color: #ff4444; background: rgba(255, 68, 68, 0.1); padding: 10px; border-radius: 5px; margin-top: 15px; display: none; font-size: 13px; }
-        .btn { background: #00ff88; color: #121212; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; margin-top: 15px; transition: 0.2s; }
-        .btn:hover { background: #00cc6e; transform: translateY(-2px); }
+        img { max-width: 100%; border-radius: 8px; border: 1px solid #444; background: repeating-conic-gradient(#252525 0% 25%, #333 0% 50%) 50% / 20px 20px; }
+        #error-log { color: #ff4444; background: rgba(255, 68, 68, 0.1); padding: 10px; border-radius: 5px; margin-top: 15px; display: none; }
+        .btn { background: #00ff88; color: #121212; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; margin-top: 15px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>GIF Background Remover</h2>
-    
-    <div id="drop-zone">
-        <strong>Datei auswählen</strong><br>
-        <span style="font-size: 13px; color: #888;">GIF hierher ziehen oder klicken</span>
-    </div>
+    <div id="drop-zone">GIF hierher ziehen oder klicken</div>
     <input type="file" id="file-input" style="display:none" accept="image/gif">
     
     <div class="status-container">
-        <span id="status-text">Bereit</span>
+        <span id="status-text">Warte auf Library...</span>
         <div class="progress-box"><div id="bar"></div></div>
     </div>
     
     <div id="error-log"></div>
 
     <div class="previews">
-        <div class="box">
-            <span>ORIGINAL</span>
-            <img id="view-orig">
-        </div>
-        <div class="box">
-            <span>RESULTAT</span>
-            <img id="view-res">
-            <br>
+        <div><small>ORIGINAL</small><img id="view-orig"></div>
+        <div>
+            <small>RESULTAT</small><img id="view-res">
             <a id="download-link" class="btn" style="display:none">Download</a>
         </div>
     </div>
@@ -63,96 +47,104 @@
 <canvas id="c" style="display:none"></canvas>
 
 <script>
+    // Sicherheitscheck für die Library
+    window.onload = () => {
+        if (typeof gifucto8 === 'undefined') {
+            document.getElementById('error-log').innerText = "Fehler: Die Library 'gif-ucto8' konnte nicht geladen werden. Bitte Seite neu laden oder Internetverbindung prüfen.";
+            document.getElementById('error-log').style.display = 'block';
+        } else {
+            document.getElementById('status-text').innerText = "Bereit";
+        }
+    };
+
     const statusText = document.getElementById('status-text');
     const bar = document.getElementById('bar');
     const errorLog = document.getElementById('error-log');
     const downloadLink = document.getElementById('download-link');
+    const fileInput = document.getElementById('file-input');
 
-    const updateStatus = (msg, percent) => {
-        statusText.innerText = msg;
-        bar.style.width = percent + "%";
-        console.log(`[Status] ${msg} (${percent}%)`);
-    };
+    document.getElementById('drop-zone').onclick = () => fileInput.click();
 
-    document.getElementById('drop-zone').onclick = () => document.getElementById('file-input').click();
-
-    document.getElementById('file-input').onchange = async (e) => {
+    fileInput.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Reset UI
         errorLog.style.display = 'none';
         downloadLink.style.display = 'none';
         document.getElementById('view-res').src = "";
         document.getElementById('view-orig').src = URL.createObjectURL(file);
         
         try {
-            updateStatus("Lade Datei hoch...", 5);
-            
+            updateStatus("Lese Datei...", 10);
             const buffer = await file.arrayBuffer();
-            const reader = new gifucto8.GifReader(new Uint8Array(buffer));
-            const numFrames = reader.numFrames();
             
-            updateStatus("GIF analysiert. Starte Verarbeitung...", 15);
+            // Initialisierung des Readers (Korrigierter Zugriff)
+            const gifData = new Uint8Array(buffer);
+            const reader = new gifucto8.GifReader(gifData);
+            
+            const numFrames = reader.numFrames();
+            const width = reader.width;
+            const height = reader.height;
+            const processedFrames = [];
 
             const canvas = document.getElementById('c');
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            canvas.width = reader.width;
-            canvas.height = reader.height;
+            canvas.width = width;
+            canvas.height = height;
 
-            const processedFrames = [];
-
-            // Phase 1: Frames einzeln bearbeiten
             for (let i = 0; i < numFrames; i++) {
-                const imgData = ctx.createImageData(reader.width, reader.height);
+                const imgData = ctx.createImageData(width, height);
+                // Frame in ImageData schreiben
                 reader.decodeAndBlitFrameRGBA(i, imgData.data);
                 
-                // Transparenz-Logik
+                // BG Removal (Chroma Key)
                 const data = imgData.data;
                 const rRef = data[0], gRef = data[1], bRef = data[2];
                 for (let j = 0; j < data.length; j += 4) {
                     const diff = Math.abs(data[j]-rRef) + Math.abs(data[j+1]-gRef) + Math.abs(data[j+2]-bRef);
-                    if (diff < 60) data[j+3] = 0;
+                    if (diff < 70) data[j+3] = 0; // Transparenz-Schwellenwert
                 }
                 
                 ctx.putImageData(imgData, 0, 0);
                 processedFrames.push(canvas.toDataURL('image/png'));
                 
-                // Fortschrittsbalken von 15% bis 50%
-                let currentProgress = 15 + Math.round((i / numFrames) * 35);
-                updateStatus(`Verarbeite Frame ${i + 1} von ${numFrames}...`, currentProgress);
+                let p = 10 + Math.round((i / numFrames) * 40);
+                updateStatus(`Verarbeite Frames: ${i+1}/${numFrames}`, p);
             }
 
-            // Phase 2: Encoding
-            updateStatus("Generiere neues GIF (Encoding)...", 60);
+            updateStatus("Erstelle GIF... (Bitte warten)", 60);
             
             gifshot.createGIF({
                 images: processedFrames,
-                gifWidth: reader.width,
-                gifHeight: reader.height,
+                gifWidth: width,
+                gifHeight: height,
                 numFrames: numFrames,
                 sampleInterval: 10,
                 interval: 0.05
             }, function (obj) {
                 if (obj.error) {
-                    errorLog.innerText = "Fehler: " + obj.errorMsg;
-                    errorLog.style.display = 'block';
-                    updateStatus("Fehler aufgetreten", 0);
+                    throw new Error(obj.errorMsg);
                 } else {
-                    updateStatus("Abgeschlossen!", 100);
+                    updateStatus("Fertig!", 100);
                     document.getElementById('view-res').src = obj.image;
                     downloadLink.href = obj.image;
-                    downloadLink.download = "transparent_background.gif";
+                    downloadLink.download = "transparent.gif";
                     downloadLink.style.display = "inline-block";
                 }
             });
 
         } catch (err) {
-            errorLog.innerText = "Kritischer Fehler: " + err.message;
+            console.error(err);
+            errorLog.innerText = "Fehler: " + err.message;
             errorLog.style.display = 'block';
             updateStatus("Abgebrochen", 0);
         }
     };
+
+    function updateStatus(msg, percent) {
+        statusText.innerText = msg;
+        bar.style.width = percent + "%";
+    }
 </script>
 </body>
 </html>
