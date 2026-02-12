@@ -3,160 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GIF Background Remover Pro</title>
+    <title>GIF Background Remover - Status Pro</title>
     <script src="https://unpkg.com/gif-ucto8@1.0.1/dist/gif-ucto8.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"></script>
     <style>
-        :root { --primary: #007bff; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 40px; background: #1a1a1a; color: white; }
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { max-width: 600px; width: 100%; background: #1e1e1e; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #333; }
         
-        .card { background: #2a2a2a; padding: 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; max-width: 800px; width: 100%; }
-        
-        #drop-zone { border: 3px dashed #444; padding: 40px; border-radius: 8px; cursor: pointer; transition: 0.3s; margin-bottom: 20px; }
-        #drop-zone:hover { border-color: var(--primary); background: #333; }
-        
-        .progress-container { width: 100%; background: #444; height: 10px; border-radius: 5px; margin: 20px 0; display: none; overflow: hidden; }
-        #progress-bar { width: 0%; height: 100%; background: var(--primary); transition: width 0.2s; }
-        
-        .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
-        .preview-box { background: #333; padding: 10px; border-radius: 8px; }
-        
-        img { max-width: 100%; border-radius: 4px; display: block; margin: 0 auto; }
-        
-        /* Transparenz-Indikator (Schachbrett) */
-        .transparent-bg {
-            background-image: linear-gradient(45deg, #3c3c3c 25%, transparent 25%), linear-gradient(-45deg, #3c3c3c 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #3c3c3c 75%), linear-gradient(-45deg, transparent 75%, #3c3c3c 75%);
-            background-size: 20px 20px;
-            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-            background-color: #2a2a2a;
-        }
+        #drop-zone { border: 2px dashed #00ff88; padding: 40px; text-align: center; cursor: pointer; border-radius: 10px; transition: 0.3s; margin-bottom: 20px; background: rgba(0, 255, 136, 0.05); }
+        #drop-zone:hover { background: rgba(0, 255, 136, 0.1); border-color: #00cc6e; }
 
-        .btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 10px; }
-        .btn:disabled { background: #666; cursor: not-allowed; }
+        /* Status & Progress */
+        .status-container { margin: 20px 0; }
+        #status-text { font-weight: bold; margin-bottom: 8px; display: block; color: #00ff88; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }
+        .progress-box { width: 100%; height: 12px; background: #333; border-radius: 6px; overflow: hidden; border: 1px solid #444; }
+        #bar { width: 0%; height: 100%; background: linear-gradient(90deg, #00cc6e, #00ff88); transition: width 0.3s ease; }
         
-        canvas { display: none; }
-        #status { margin-top: 10px; font-size: 0.9em; color: #aaa; }
+        .previews { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
+        .box { text-align: center; font-size: 12px; color: #888; }
+        img { max-width: 100%; border-radius: 8px; border: 1px solid #444; min-height: 100px; background: repeating-conic-gradient(#252525 0% 25%, #333 0% 50%) 50% / 20px 20px; }
+        
+        #error-log { color: #ff4444; background: rgba(255, 68, 68, 0.1); padding: 10px; border-radius: 5px; margin-top: 15px; display: none; font-size: 13px; }
+        .btn { background: #00ff88; color: #121212; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; margin-top: 15px; transition: 0.2s; }
+        .btn:hover { background: #00cc6e; transform: translateY(-2px); }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h2>GIF Background Remover</h2>
-        <p>Lade dein GIF hoch, um den Hintergrund zu entfernen.</p>
+<div class="container">
+    <h2>GIF Background Remover</h2>
+    
+    <div id="drop-zone">
+        <strong>Datei auswählen</strong><br>
+        <span style="font-size: 13px; color: #888;">GIF hierher ziehen oder klicken</span>
+    </div>
+    <input type="file" id="file-input" style="display:none" accept="image/gif">
+    
+    <div class="status-container">
+        <span id="status-text">Bereit</span>
+        <div class="progress-box"><div id="bar"></div></div>
+    </div>
+    
+    <div id="error-log"></div>
 
-        <div id="drop-zone">GIF hierher ziehen oder klicken</div>
-        <input type="file" id="file-input" accept="image/gif" style="display: none;">
-
-        <div class="progress-container" id="p-container">
-            <div id="progress-bar"></div>
+    <div class="previews">
+        <div class="box">
+            <span>ORIGINAL</span>
+            <img id="view-orig">
         </div>
-        <div id="status">Bereit zum Verarbeiten...</div>
-
-        <div class="preview-grid">
-            <div class="preview-box">
-                <small>Original</small>
-                <img id="orig-view">
-            </div>
-            <div class="preview-box">
-                <small>Ergebnis (Transparent)</small>
-                <div class="transparent-bg">
-                    <img id="res-view">
-                </div>
-                <a id="download-btn" class="btn" style="display: none;">Download GIF</a>
-            </div>
+        <div class="box">
+            <span>RESULTAT</span>
+            <img id="view-res">
+            <br>
+            <a id="download-link" class="btn" style="display:none">Download</a>
         </div>
     </div>
+</div>
 
-    <canvas id="c"></canvas>
+<canvas id="c" style="display:none"></canvas>
 
-    <script>
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const status = document.getElementById('status');
-        const progressBar = document.getElementById('progress-bar');
-        const pContainer = document.getElementById('p-container');
-        const resView = document.getElementById('res-view');
-        const origView = document.getElementById('orig-view');
-        const downloadBtn = document.getElementById('download-btn');
-        const canvas = document.getElementById('c');
-        const ctx = canvas.getContext('2d');
+<script>
+    const statusText = document.getElementById('status-text');
+    const bar = document.getElementById('bar');
+    const errorLog = document.getElementById('error-log');
+    const downloadLink = document.getElementById('download-link');
 
-        dropZone.onclick = () => fileInput.click();
-        fileInput.onchange = (e) => { if(e.target.files[0]) process(e.target.files[0]); };
+    const updateStatus = (msg, percent) => {
+        statusText.innerText = msg;
+        bar.style.width = percent + "%";
+        console.log(`[Status] ${msg} (${percent}%)`);
+    };
 
-        async function process(file) {
-            // Reset UI
-            status.innerText = "Initialisiere...";
-            pContainer.style.display = "block";
-            progressBar.style.width = "0%";
-            resView.src = "";
-            downloadBtn.style.display = "none";
-            origView.src = URL.createObjectURL(file);
+    document.getElementById('drop-zone').onclick = () => document.getElementById('file-input').click();
 
+    document.getElementById('file-input').onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Reset UI
+        errorLog.style.display = 'none';
+        downloadLink.style.display = 'none';
+        document.getElementById('view-res').src = "";
+        document.getElementById('view-orig').src = URL.createObjectURL(file);
+        
+        try {
+            updateStatus("Lade Datei hoch...", 5);
+            
             const buffer = await file.arrayBuffer();
             const reader = new gifucto8.GifReader(new Uint8Array(buffer));
             const numFrames = reader.numFrames();
-            const frames = [];
+            
+            updateStatus("GIF analysiert. Starte Verarbeitung...", 15);
 
+            const canvas = document.getElementById('c');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             canvas.width = reader.width;
             canvas.height = reader.height;
 
-            // Phase 1: Frames bearbeiten
+            const processedFrames = [];
+
+            // Phase 1: Frames einzeln bearbeiten
             for (let i = 0; i < numFrames; i++) {
                 const imgData = ctx.createImageData(reader.width, reader.height);
                 reader.decodeAndBlitFrameRGBA(i, imgData.data);
                 
-                // Hintergrund-Entfernung
-                const processed = removeBg(imgData);
-                ctx.putImageData(processed, 0, 0);
+                // Transparenz-Logik
+                const data = imgData.data;
+                const rRef = data[0], gRef = data[1], bRef = data[2];
+                for (let j = 0; j < data.length; j += 4) {
+                    const diff = Math.abs(data[j]-rRef) + Math.abs(data[j+1]-gRef) + Math.abs(data[j+2]-bRef);
+                    if (diff < 60) data[j+3] = 0;
+                }
                 
-                frames.push(canvas.toDataURL('image/png'));
+                ctx.putImageData(imgData, 0, 0);
+                processedFrames.push(canvas.toDataURL('image/png'));
                 
-                // Fortschritt bis 50% (Processing Phase)
-                let p = Math.round(((i + 1) / numFrames) * 50);
-                progressBar.style.width = p + "%";
-                status.innerText = `Bearbeite Frame ${i+1} von ${numFrames}...`;
+                // Fortschrittsbalken von 15% bis 50%
+                let currentProgress = 15 + Math.round((i / numFrames) * 35);
+                updateStatus(`Verarbeite Frame ${i + 1} von ${numFrames}...`, currentProgress);
             }
 
             // Phase 2: Encoding
-            status.innerText = "Kodiere neues GIF... Bitte warten.";
+            updateStatus("Generiere neues GIF (Encoding)...", 60);
             
             gifshot.createGIF({
-                images: frames,
+                images: processedFrames,
                 gifWidth: reader.width,
                 gifHeight: reader.height,
-                interval: 0.05, // Schneller für flüssigere Animation
-                numFrames: numFrames
+                numFrames: numFrames,
+                sampleInterval: 10,
+                interval: 0.05
             }, function (obj) {
-                if (!obj.error) {
-                    progressBar.style.width = "100%";
-                    status.innerText = "Fertig!";
-                    resView.src = obj.image;
-                    downloadBtn.href = obj.image;
-                    downloadBtn.download = "removed_background.gif";
-                    downloadBtn.style.display = "inline-block";
+                if (obj.error) {
+                    errorLog.innerText = "Fehler: " + obj.errorMsg;
+                    errorLog.style.display = 'block';
+                    updateStatus("Fehler aufgetreten", 0);
                 } else {
-                    status.innerText = "Fehler beim Erstellen.";
+                    updateStatus("Abgeschlossen!", 100);
+                    document.getElementById('view-res').src = obj.image;
+                    downloadLink.href = obj.image;
+                    downloadLink.download = "transparent_background.gif";
+                    downloadLink.style.display = "inline-block";
                 }
             });
-        }
 
-        function removeBg(imgData) {
-            const data = imgData.data;
-            // Wir nehmen die Farbe des Pixels (0,0) als Referenz (Hintergrund)
-            const rRef = data[0], gRef = data[1], bRef = data[2];
-            const threshold = 50; 
-
-            for (let i = 0; i < data.length; i += 4) {
-                const r = data[i], g = data[i+1], b = data[i+2];
-                const diff = Math.sqrt((r-rRef)**2 + (g-gRef)**2 + (b-bRef)**2);
-                
-                if (diff < threshold) {
-                    data[i+3] = 0; // Transparent machen
-                }
-            }
-            return imgData;
+        } catch (err) {
+            errorLog.innerText = "Kritischer Fehler: " + err.message;
+            errorLog.style.display = 'block';
+            updateStatus("Abgebrochen", 0);
         }
-    </script>
+    };
+</script>
 </body>
 </html>
