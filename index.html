@@ -3,191 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GIF Remover - Final Stable Version</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/omggif@1.0.10/omggif.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gifshot@0.4.5/build/gifshot.min.js"></script>
-
+    <title>GIF Remover - Ultimate Resilience Edition</title>
     <style>
-        :root { --accent: #00ff88; --bg: #121212; --card: #1e1e1e; }
-        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: #eee; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
-        .container { max-width: 700px; width: 100%; background: var(--card); padding: 30px; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid #333; margin-top: 20px; }
+        :root { --accent: #00ff88; --bg: #0f0f0f; --card: #1a1a1a; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: #eee; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        .container { max-width: 650px; width: 100%; background: var(--card); padding: 30px; border-radius: 20px; box-shadow: 0 15px 50px rgba(0,0,0,0.7); border: 1px solid #333; }
         
-        h2 { margin-top: 0; color: var(--accent); text-align: center; }
+        h2 { margin-top: 0; color: var(--accent); text-align: center; letter-spacing: 1px; }
         
-        #drop-zone { border: 2px dashed #444; padding: 40px; text-align: center; cursor: pointer; border-radius: 12px; transition: 0.3s; background: rgba(255,255,255,0.02); }
-        #drop-zone:hover { border-color: var(--accent); background: rgba(0, 255, 136, 0.05); }
+        #drop-zone { border: 2px dashed #444; padding: 40px; text-align: center; cursor: pointer; border-radius: 15px; transition: 0.3s; background: rgba(255,255,255,0.01); }
+        #drop-zone.active { border-color: var(--accent); background: rgba(0, 255, 136, 0.05); }
 
-        .status-box { margin: 25px 0; }
-        #status-text { font-size: 14px; font-weight: 600; color: var(--accent); display: block; margin-bottom: 8px; text-transform: uppercase; }
+        .status-area { margin: 25px 0; background: #222; padding: 15px; border-radius: 10px; border-left: 4px solid #444; }
+        #status-text { font-size: 13px; font-family: monospace; display: block; margin-bottom: 8px; color: #aaa; }
         
-        .progress-bar-bg { width: 100%; height: 10px; background: #333; border-radius: 5px; overflow: hidden; }
-        #progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #00cc6e, var(--accent)); transition: width 0.3s; }
+        .progress-bar-bg { width: 100%; height: 8px; background: #111; border-radius: 4px; overflow: hidden; }
+        #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px var(--accent); }
         
-        .previews { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
-        .preview-item { text-align: center; }
-        .preview-item span { font-size: 11px; color: #888; display: block; margin-bottom: 5px; }
+        .previews { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .box { text-align: center; }
+        .box span { font-size: 10px; color: #666; text-transform: uppercase; margin-bottom: 5px; display: block; }
         
-        img { max-width: 100%; border-radius: 8px; border: 1px solid #333; min-height: 150px; object-fit: contain;
-              background-image: linear-gradient(45deg, #252525 25%, transparent 25%), linear-gradient(-45deg, #252525 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #252525 75%), linear-gradient(-45deg, transparent 75%, #252525 75%);
-              background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px; }
+        img { max-width: 100%; border-radius: 8px; border: 1px solid #222; min-height: 150px; object-fit: contain;
+              background-image: linear-gradient(45deg, #1a1a1a 25%, transparent 25%), linear-gradient(-45deg, #1a1a1a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1a1a1a 75%), linear-gradient(-45deg, transparent 75%, #1a1a1a 75%);
+              background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0px; }
         
-        .btn { background: var(--accent); color: #121212; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; margin-top: 15px; width: 100%; text-align: center; transition: 0.2s; }
-        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn { background: var(--accent); color: #000; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; transition: 0.2s; }
+        .btn:hover:not(:disabled) { transform: scale(1.02); opacity: 0.9; }
+        .btn:disabled { background: #444; color: #888; cursor: not-allowed; }
         
-        #error-display { color: #ff4444; background: rgba(255, 68, 68, 0.1); padding: 15px; border-radius: 8px; margin-top: 20px; display: none; font-size: 13px; border: 1px solid rgba(255, 68, 68, 0.2); }
+        #retry-btn { background: #ff4444; color: white; margin-top: 10px; display: none; }
+        .log-error { color: #ff4444 !important; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>GIF BG Remover</h2>
+    <h2>GIF BG REMOVER <small style="font-size: 0.5em; opacity: 0.5;">v4.0</small></h2>
     
     <div id="drop-zone">
-        <strong>GIF auswählen</strong><br>
-        <span style="color: #888; font-size: 13px;">Klicken oder hierher ziehen</span>
+        <strong>GIF hierher ziehen</strong><br>
+        <span style="font-size: 12px; color: #666;">oder klicken zum Auswählen</span>
     </div>
     <input type="file" id="file-input" style="display:none" accept="image/gif">
 
-    <div class="status-box">
-        <span id="status-text">Prüfe Libraries...</span>
+    <div class="status-area">
+        <span id="status-text">Initialisiere System...</span>
         <div class="progress-bar-bg">
             <div id="progress-fill"></div>
         </div>
+        <button id="retry-btn" class="btn" onclick="location.reload()">Library-Laden wiederholen</button>
     </div>
 
-    <div id="error-display"></div>
-
     <div class="previews">
-        <div class="preview-item">
-            <span>ORIGINAL</span>
-            <img id="img-orig" alt="">
+        <div class="box">
+            <span>Original</span>
+            <img id="view-orig" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
         </div>
-        <div class="preview-item">
-            <span>TRANSPARENT</span>
-            <img id="img-res" alt="">
-            <a id="dl-btn" class="btn" style="display:none">Download GIF</a>
+        <div class="box">
+            <span>Resultat</span>
+            <img id="view-res" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+            <a id="dl-link" class="btn" style="display:none; text-decoration: none;">Download GIF</a>
         </div>
     </div>
 </div>
 
-<canvas id="work-canvas" style="display:none"></canvas>
+<canvas id="worker-canvas" style="display:none"></canvas>
 
 <script>
     const statusText = document.getElementById('status-text');
     const progressFill = document.getElementById('progress-fill');
-    const errorDisplay = document.getElementById('error-display');
+    const retryBtn = document.getElementById('retry-btn');
     const fileInput = document.getElementById('file-input');
-    const dlBtn = document.getElementById('dl-btn');
+    const dlLink = document.getElementById('dl-link');
 
-    // 1. Library Check
-    function checkLibs() {
-        const gifshotLoaded = typeof gifshot !== 'undefined';
-        const omggifLoaded = typeof GifReader !== 'undefined';
+    // 1. DYNAMISCHES LADEN DER LIBRARIES (ULTRA-STABIL)
+    const libs = {
+        omggif: [
+            "https://cdn.jsdelivr.net/npm/omggif@1.0.10/omggif.min.js",
+            "https://unpkg.com/omggif@1.0.10/omggif.js",
+            "https://cdnjs.cloudflare.com/ajax/libs/omggif/1.0.10/omggif.min.js"
+        ],
+        gifshot: [
+            "https://cdn.jsdelivr.net/npm/gifshot@0.4.5/build/gifshot.min.js",
+            "https://unpkg.com/gifshot@0.4.5/dist/gifshot.min.js",
+            "https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"
+        ]
+    };
 
-        if (gifshotLoaded && omggifLoaded) {
-            statusText.innerText = "Bereit zum Hochladen";
-            return true;
+    async function loadWithFallback(name, urls) {
+        for (let url of urls) {
+            try {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = url;
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+                console.log(`[OK] ${name} geladen von: ${url}`);
+                return true;
+            } catch (e) {
+                console.warn(`[FAIL] ${name} konnte nicht geladen werden von: ${url}`);
+            }
+        }
+        return false;
+    }
+
+    async function init() {
+        if (window.location.protocol === 'file:') {
+            statusText.innerHTML = "<span class='log-error'>Warnung: 'file://' erkannt. Öffne die Datei über einen lokalen Server (z.B. VS Code Live Server), falls die Libraries blockiert werden.</span>";
+        }
+
+        updateStatus("Lade Kern-Komponenten...", 20);
+        
+        const gifReaderOk = await loadWithFallback('omggif', libs.omggif);
+        const gifshotOk = await loadWithFallback('gifshot', libs.gifshot);
+
+        if (gifReaderOk && gifshotOk) {
+            updateStatus("System bereit. GIF hochladen.", 100);
+            progressFill.style.backgroundColor = "var(--accent)";
         } else {
-            let missing = !gifshotLoaded ? "gifshot " : "";
-            missing += !omggifLoaded ? "omggif" : "";
-            showError("Fehler: Library konnte nicht geladen werden (" + missing + "). Prüfe deine Internetverbindung.");
-            return false;
+            updateStatus("Kritischer Fehler: Libraries konnten nicht geladen werden.", 0);
+            statusText.classList.add('log-error');
+            retryBtn.style.display = "block";
         }
     }
 
-    // Warte kurz, bis Libraries sicher geladen sind
-    setTimeout(checkLibs, 1000);
+    init();
 
-    function showError(msg) {
-        errorDisplay.innerText = msg;
-        errorDisplay.style.display = 'block';
-        statusText.innerText = "Fehler";
-        progressFill.style.backgroundColor = "#ff4444";
-    }
-
-    function updateProgress(text, percent) {
-        statusText.innerText = text;
+    // 2. VERARBEITUNGSLOGIK
+    function updateStatus(msg, percent) {
+        statusText.innerText = msg;
         progressFill.style.width = percent + "%";
     }
 
     document.getElementById('drop-zone').onclick = () => fileInput.click();
+    fileInput.onchange = (e) => handleFile(e.target.files[0]);
 
-    fileInput.onchange = async (e) => {
-        if (!checkLibs()) return;
+    async function handleFile(file) {
+        if (!file || typeof gifshot === 'undefined') return;
+
+        dlLink.style.display = 'none';
+        document.getElementById('view-res').src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+        document.getElementById('view-orig').src = URL.createObjectURL(file);
         
-        const file = e.target.files[0];
-        if (!file) return;
-
-        // UI Reset
-        errorDisplay.style.display = 'none';
-        dlBtn.style.display = 'none';
-        document.getElementById('img-res').src = "";
-        document.getElementById('img-orig').src = URL.createObjectURL(file);
-        progressFill.style.backgroundColor = "";
-
         try {
-            updateProgress("Lese Datei...", 10);
+            updateStatus("Analysiere Frames...", 10);
             const buffer = await file.arrayBuffer();
             const reader = new GifReader(new Uint8Array(buffer));
             
             const { width, height } = reader;
             const numFrames = reader.numFrames();
-            const canvas = document.getElementById('work-canvas');
+            const canvas = document.getElementById('worker-canvas');
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
             
             canvas.width = width;
             canvas.height = height;
-            const processedFrames = [];
+            const frames = [];
 
-            // Phase 1: Frames entpacken & BG entfernen
             for (let i = 0; i < numFrames; i++) {
                 const imgData = ctx.createImageData(width, height);
                 reader.decodeAndBlitFrameRGBA(i, imgData.data);
                 
-                // Hintergrund-Entfernung (erster Pixel als Referenz)
+                // BG REMOVAL
                 const d = imgData.data;
-                const rR = d[0], gR = d[1], bR = d[2];
+                const rR = d[0], gR = d[1], bR = d[2]; // Erster Pixel als Hintergrund-Referenz
                 
                 for (let j = 0; j < d.length; j += 4) {
-                    // Farbdifferenz berechnen
                     const diff = Math.abs(d[j]-rR) + Math.abs(d[j+1]-gR) + Math.abs(d[j+2]-bR);
-                    if (diff < 70) d[j+3] = 0; // Transparenz setzen
+                    if (diff < 80) d[j+3] = 0; 
                 }
                 
                 ctx.putImageData(imgData, 0, 0);
-                processedFrames.push(canvas.toDataURL('image/png'));
+                frames.push(canvas.toDataURL('image/png'));
                 
-                let p = 10 + Math.round((i / numFrames) * 40);
-                updateProgress(`Verarbeite Frame ${i+1}/${numFrames}`, p);
+                if (i % 2 === 0) updateStatus(`Verarbeite: ${Math.round((i/numFrames)*100)}%`, 10 + (i/numFrames)*40);
             }
 
-            // Phase 2: Neues GIF zusammenbauen
-            updateProgress("Generiere GIF (Encoding)...", 60);
+            updateStatus("Kodiere GIF (bitte warten)...", 60);
             
             gifshot.createGIF({
-                images: processedFrames,
+                images: frames,
                 gifWidth: width,
                 gifHeight: height,
                 numFrames: numFrames,
                 sampleInterval: 10,
-                interval: 0.06 // Geschwindigkeit
+                interval: 0.06
             }, function (obj) {
                 if (obj.error) {
-                    showError("Encoding Fehler: " + obj.errorMsg);
+                    updateStatus("Fehler beim Kodieren: " + obj.errorMsg, 0);
                 } else {
-                    updateProgress("Fertig!", 100);
-                    document.getElementById('img-res').src = obj.image;
-                    dlBtn.href = obj.image;
-                    dlBtn.download = "transparent_animation.gif";
-                    dlBtn.style.display = "block";
+                    updateStatus("Fertig!", 100);
+                    document.getElementById('view-res').src = obj.image;
+                    dlLink.href = obj.image;
+                    dlLink.download = "transparent_result.gif";
+                    dlLink.style.display = "block";
                 }
             });
 
         } catch (err) {
-            showError("Kritischer Fehler: " + err.message);
+            updateStatus("Fehler: " + err.message, 0);
+            console.error(err);
         }
-    };
+    }
+
+    // Drag & Drop
+    const dz = document.getElementById('drop-zone');
+    dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('active'); };
+    dz.ondragleave = () => dz.classList.remove('active');
+    dz.ondrop = (e) => { e.preventDefault(); dz.classList.remove('active'); handleFile(e.dataTransfer.files[0]); };
 </script>
 </body>
 </html>
