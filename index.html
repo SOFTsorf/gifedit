@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GIF Background Remover - Fixed</title>
-    <script src="https://cdn.jsdelivr.net/npm/gif-ucto8@1.0.1/dist/gif-ucto8.min.js"></script>
+    <title>GIF Background Remover - Ultra Stable</title>
+    <script src="https://cdn.jsdelivr.net/npm/omggif@1.0.10/omggif.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; display: flex; flex-direction: column; align-items: center; padding: 20px; }
@@ -17,19 +17,19 @@
         #bar { width: 0%; height: 100%; background: #00ff88; transition: width 0.3s ease; }
         .previews { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
         img { max-width: 100%; border-radius: 8px; border: 1px solid #444; background: repeating-conic-gradient(#252525 0% 25%, #333 0% 50%) 50% / 20px 20px; }
+        .btn { background: #00ff88; color: #121212; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; margin-top: 15px; text-align: center; }
         #error-log { color: #ff4444; background: rgba(255, 68, 68, 0.1); padding: 10px; border-radius: 5px; margin-top: 15px; display: none; }
-        .btn { background: #00ff88; color: #121212; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; margin-top: 15px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>GIF Background Remover</h2>
-    <div id="drop-zone">GIF hierher ziehen oder klicken</div>
+    <div id="drop-zone">Datei wählen oder hierher ziehen</div>
     <input type="file" id="file-input" style="display:none" accept="image/gif">
     
     <div class="status-container">
-        <span id="status-text">Warte auf Library...</span>
+        <span id="status-text">Bereit</span>
         <div class="progress-box"><div id="bar"></div></div>
     </div>
     
@@ -39,7 +39,7 @@
         <div><small>ORIGINAL</small><img id="view-orig"></div>
         <div>
             <small>RESULTAT</small><img id="view-res">
-            <a id="download-link" class="btn" style="display:none">Download</a>
+            <a id="download-link" class="btn" style="display:none">Download GIF</a>
         </div>
     </div>
 </div>
@@ -47,21 +47,18 @@
 <canvas id="c" style="display:none"></canvas>
 
 <script>
-    // Sicherheitscheck für die Library
-    window.onload = () => {
-        if (typeof gifucto8 === 'undefined') {
-            document.getElementById('error-log').innerText = "Fehler: Die Library 'gif-ucto8' konnte nicht geladen werden. Bitte Seite neu laden oder Internetverbindung prüfen.";
-            document.getElementById('error-log').style.display = 'block';
-        } else {
-            document.getElementById('status-text').innerText = "Bereit";
-        }
-    };
-
     const statusText = document.getElementById('status-text');
     const bar = document.getElementById('bar');
     const errorLog = document.getElementById('error-log');
     const downloadLink = document.getElementById('download-link');
     const fileInput = document.getElementById('file-input');
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+
+    function updateUI(msg, percent) {
+        statusText.innerText = msg;
+        bar.style.width = percent + "%";
+    }
 
     document.getElementById('drop-zone').onclick = () => fileInput.click();
 
@@ -75,45 +72,48 @@
         document.getElementById('view-orig').src = URL.createObjectURL(file);
         
         try {
-            updateStatus("Lese Datei...", 10);
-            const buffer = await file.arrayBuffer();
+            updateUI("Lese Datei ein...", 10);
+            const arrayBuffer = await file.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
             
-            // Initialisierung des Readers (Korrigierter Zugriff)
-            const gifData = new Uint8Array(buffer);
-            const reader = new gifucto8.GifReader(gifData);
+            // Initialisierung mit omggif
+            const reader = new Uint8Array(arrayBuffer);
+            const gifReader = new giffy.GifReader(reader);
             
-            const numFrames = reader.numFrames();
-            const width = reader.width;
-            const height = reader.height;
+            const width = gifReader.width;
+            const height = gifReader.height;
+            const numFrames = gifReader.numFrames();
             const processedFrames = [];
 
-            const canvas = document.getElementById('c');
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             canvas.width = width;
             canvas.height = height;
 
             for (let i = 0; i < numFrames; i++) {
-                const imgData = ctx.createImageData(width, height);
-                // Frame in ImageData schreiben
-                reader.decodeAndBlitFrameRGBA(i, imgData.data);
+                updateUI(`Verarbeite Frame ${i+1}/${numFrames}`, 10 + (i/numFrames)*40);
                 
-                // BG Removal (Chroma Key)
-                const data = imgData.data;
+                const frameData = ctx.createImageData(width, height);
+                gifReader.decodeAndBlitFrameRGBA(i, frameData.data);
+                
+                // Hintergrund-Entfernung (Chroma Key)
+                const data = frameData.data;
+                // Wir nehmen den ersten Pixel als Hintergrundfarbe
                 const rRef = data[0], gRef = data[1], bRef = data[2];
+                
                 for (let j = 0; j < data.length; j += 4) {
-                    const diff = Math.abs(data[j]-rRef) + Math.abs(data[j+1]-gRef) + Math.abs(data[j+2]-bRef);
-                    if (diff < 70) data[j+3] = 0; // Transparenz-Schwellenwert
+                    const r = data[j], g = data[j+1], b = data[j+2];
+                    // Einfache Farbdifferenz-Berechnung
+                    const diff = Math.abs(r - rRef) + Math.abs(g - gRef) + Math.abs(b - bRef);
+                    if (diff < 80) { // Schwellenwert
+                        data[j+3] = 0; 
+                    }
                 }
                 
-                ctx.putImageData(imgData, 0, 0);
+                ctx.putImageData(frameData, 0, 0);
                 processedFrames.push(canvas.toDataURL('image/png'));
-                
-                let p = 10 + Math.round((i / numFrames) * 40);
-                updateStatus(`Verarbeite Frames: ${i+1}/${numFrames}`, p);
             }
 
-            updateStatus("Erstelle GIF... (Bitte warten)", 60);
-            
+            updateUI("GIF wird neu kodiert...", 60);
+
             gifshot.createGIF({
                 images: processedFrames,
                 gifWidth: width,
@@ -123,13 +123,14 @@
                 interval: 0.05
             }, function (obj) {
                 if (obj.error) {
-                    throw new Error(obj.errorMsg);
+                    errorLog.innerText = "Encoding Fehler: " + obj.errorMsg;
+                    errorLog.style.display = "block";
                 } else {
-                    updateStatus("Fertig!", 100);
+                    updateUI("Abgeschlossen!", 100);
                     document.getElementById('view-res').src = obj.image;
                     downloadLink.href = obj.image;
-                    downloadLink.download = "transparent.gif";
-                    downloadLink.style.display = "inline-block";
+                    downloadLink.download = "no-background.gif";
+                    downloadLink.style.display = "block";
                 }
             });
 
@@ -137,14 +138,12 @@
             console.error(err);
             errorLog.innerText = "Fehler: " + err.message;
             errorLog.style.display = 'block';
-            updateStatus("Abgebrochen", 0);
+            updateUI("Fehlgeschlagen", 0);
         }
     };
 
-    function updateStatus(msg, percent) {
-        statusText.innerText = msg;
-        bar.style.width = percent + "%";
-    }
+    // Alias für die Library falls sie unter anderem Namen lädt
+    const giffy = window.omggif || { GifReader: window.GifReader };
 </script>
 </body>
 </html>
