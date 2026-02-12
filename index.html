@@ -3,76 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GIF BG Remover - No Ghosting Edition</title>
+    <title>GIF Background Remover - No Overlap Fix</title>
     
     <script src="https://cdn.jsdelivr.net/npm/omggif@1.0.10/omggif.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gifshot@0.4.5/build/gifshot.min.js"></script>
 
     <style>
-        :root { --green: #00ff88; --dark: #121212; }
-        body { font-family: sans-serif; background: var(--dark); color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { max-width: 600px; width: 100%; background: #1e1e1e; padding: 25px; border-radius: 15px; border: 1px solid #333; }
+        :root { --accent: #00ff88; --bg: #121212; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { max-width: 600px; width: 100%; background: #1e1e1e; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         
-        #drop-zone { border: 2px dashed #444; padding: 30px; text-align: center; cursor: pointer; border-radius: 10px; margin-bottom: 20px; transition: 0.3s; }
-        #drop-zone:hover { border-color: var(--green); background: rgba(0,255,136,0.05); }
+        #drop-zone { border: 2px dashed #444; padding: 30px; text-align: center; cursor: pointer; border-radius: 10px; margin-bottom: 20px; transition: 0.3s; background: rgba(255,255,255,0.02); }
+        #drop-zone:hover { border-color: var(--accent); background: rgba(0,255,136,0.05); }
 
-        .progress-container { margin: 20px 0; }
-        #status { font-size: 13px; color: var(--green); font-family: monospace; display: block; margin-bottom: 5px; }
+        .progress-box { margin: 20px 0; }
+        #status { font-size: 13px; color: var(--accent); font-family: monospace; display: block; margin-bottom: 5px; }
         .bar-bg { width: 100%; height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
-        #bar-fill { width: 0%; height: 100%; background: var(--green); transition: width 0.2s; }
+        #bar-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.2s; }
         
-        .preview-area { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        img { max-width: 100%; border: 1px solid #333; border-radius: 5px; min-height: 100px;
-              /* Schachbrett für Transparenz */
+        .previews { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        img { max-width: 100%; border: 1px solid #333; border-radius: 8px; min-height: 150px;
               background-image: linear-gradient(45deg, #252525 25%, transparent 25%), linear-gradient(-45deg, #252525 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #252525 75%), linear-gradient(-45deg, transparent 75%, #252525 75%);
-              background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0px; }
+              background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0px; }
 
-        .btn { background: var(--green); color: #000; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; text-decoration: none; display: inline-block; text-align: center; margin-top: 10px; }
-        #error-msg { color: #ff4444; font-size: 12px; margin-top: 10px; display: none; }
+        .btn { background: var(--accent); color: #000; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; text-decoration: none; display: inline-block; text-align: center; margin-top: 15px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 style="text-align: center; color: var(--green);">GIF Remover <small style="font-size: 0.4em; color: #666;">FIXED</small></h2>
+    <h2 style="text-align: center; color: var(--accent); margin-top: 0;">GIF REMOVER <small style="font-size: 0.4em; opacity: 0.5;">ULTIMATE FIX</small></h2>
     
-    <div id="drop-zone">GIF hierher ziehen oder klicken</div>
+    <div id="drop-zone">Datei hierher ziehen oder klicken</div>
     <input type="file" id="file-input" style="display:none" accept="image/gif">
 
-    <div class="progress-container">
-        <span id="status">Warte auf System...</span>
+    <div class="progress-box">
+        <span id="status">Initialisiere...</span>
         <div class="bar-bg"><div id="bar-fill"></div></div>
     </div>
 
-    <div id="error-msg"></div>
-
-    <div class="preview-area">
-        <div style="text-align: center;"><small>Original</small><br><img id="orig-img"></div>
-        <div style="text-align: center;"><small>Resultat</small><br><img id="res-img"></div>
+    <div class="previews">
+        <div style="text-align: center;"><small style="color:#888">ORIGINAL</small><br><img id="orig-view"></div>
+        <div style="text-align: center;"><small style="color:#888">RESULTAT</small><br><img id="res-view"></div>
     </div>
-    <a id="dl-btn" class="btn" style="display:none">Download Transparent GIF</a>
+    <a id="download-btn" class="btn" style="display:none">Download Transparent GIF</a>
 </div>
 
-<canvas id="c" style="display:none"></canvas>
+<canvas id="canvas-task" style="display:none"></canvas>
 
 <script>
     const status = document.getElementById('status');
     const bar = document.getElementById('bar-fill');
     const fileInput = document.getElementById('file-input');
-    const resImg = document.getElementById('res-img');
-    const dlBtn = document.getElementById('dl-btn');
+    const resView = document.getElementById('res-view');
+    const downloadBtn = document.getElementById('download-btn');
 
-    // WICHTIG: Sicherstellen, dass die Libraries da sind
-    function checkLibs() {
+    // Sicherstellen, dass Libraries geladen sind
+    function checkSystems() {
         if (typeof GifReader !== 'undefined' && typeof gifshot !== 'undefined') {
-            status.innerText = "Bereit. Bitte GIF wählen.";
+            status.innerText = "System bereit. Bitte GIF wählen.";
             return true;
         }
-        status.innerText = "Lade Libraries... (bitte warten)";
-        setTimeout(checkLibs, 500);
+        status.innerText = "Lade Libraries... (Versuche Verbindung)";
+        setTimeout(checkSystems, 500);
         return false;
     }
-    checkLibs();
+    checkSystems();
 
     document.getElementById('drop-zone').onclick = () => fileInput.click();
 
@@ -80,75 +76,81 @@
         const file = e.target.files[0];
         if (!file) return;
 
-        // UI Reset
-        status.innerText = "Lese Datei...";
+        // Reset
+        status.innerText = "Analysiere GIF...";
         bar.style.width = "0%";
-        dlBtn.style.display = "none";
-        resImg.src = "";
-        document.getElementById('orig-img').src = URL.createObjectURL(file);
+        downloadBtn.style.display = "none";
+        resView.src = "";
+        document.getElementById('orig-view').src = URL.createObjectURL(file);
 
         try {
             const buffer = await file.arrayBuffer();
             const reader = new GifReader(new Uint8Array(buffer));
-            const { width, height } = reader;
-            const numFrames = reader.numFrames();
+            const width = reader.width;
+            const height = reader.height;
+            const frameCount = reader.numFrames();
             
-            const canvas = document.getElementById('c');
+            const canvas = document.getElementById('canvas-task');
             const ctx = canvas.getContext('2d');
             canvas.width = width;
             canvas.height = height;
 
             const frames = [];
 
-            for (let i = 0; i < numFrames; i++) {
-                // FIX FÜR ÜBERLAGERUNG: Canvas vor jedem Frame komplett leeren!
+            for (let i = 0; i < frameCount; i++) {
+                // 1. SCHRITT: Canvas komplett säubern (Wichtig gegen Überlagerung!)
                 ctx.clearRect(0, 0, width, height);
                 
-                const imgData = ctx.createImageData(width, height);
-                reader.decodeAndBlitFrameRGBA(i, imgData.data);
+                const imageData = ctx.createImageData(width, height);
+                reader.decodeAndBlitFrameRGBA(i, imageData.data);
                 
-                // Hintergrund entfernen (Chroma Key)
-                const d = imgData.data;
-                const rR = d[0], gR = d[1], bR = d[2]; // Farbe des ersten Pixels
+                const data = imageData.data;
+                // Referenzfarbe vom ersten Pixel (Ecke oben links)
+                const rRef = data[0], gRef = data[1], bRef = data[2];
                 
-                for (let j = 0; j < d.length; j += 4) {
-                    const diff = Math.abs(d[j]-rR) + Math.abs(d[j+1]-gR) + Math.abs(d[j+2]-bR);
-                    if (diff < 75) d[j+3] = 0; // Transparent machen
+                // 2. SCHRITT: Hintergrund entfernen
+                for (let j = 0; j < data.length; j += 4) {
+                    const diff = Math.abs(data[j] - rRef) + Math.abs(data[j+1] - gRef) + Math.abs(data[j+2] - bRef);
+                    if (diff < 90) { // Schwellenwert für saubere Ränder
+                        data[j+3] = 0; 
+                    }
                 }
                 
-                ctx.putImageData(imgData, 0, 0);
+                ctx.putImageData(imageData, 0, 0);
                 frames.push(canvas.toDataURL('image/png'));
                 
-                bar.style.width = (10 + (i/numFrames)*40) + "%";
-                status.innerText = `Frame ${i+1}/${numFrames} wird gereinigt...`;
+                bar.style.width = (10 + (i / frameCount) * 40) + "%";
+                status.innerText = `Bereinige Frame ${i+1}/${frameCount}...`;
             }
 
-            status.innerText = "Erstelle transparentes GIF...";
+            status.innerText = "Kodiere transparentes GIF...";
             
             gifshot.createGIF({
                 images: frames,
                 gifWidth: width,
                 gifHeight: height,
-                numFrames: numFrames,
+                numFrames: frameCount,
                 sampleInterval: 10,
                 interval: 0.06,
-                // Diese Einstellung hilft gegen Geisterbilder
-                clearCanvas: true 
+                // 3. SCHRITT: Disposal Method 2 erzwingen (Verhindert Ghosting)
+                renderingContext: {
+                    disposal: 2 
+                }
             }, function (obj) {
                 if (obj.error) {
                     status.innerText = "Fehler: " + obj.errorMsg;
                 } else {
                     status.innerText = "Fertig!";
                     bar.style.width = "100%";
-                    resImg.src = obj.image;
-                    dlBtn.href = obj.image;
-                    dlBtn.download = "transparent.gif";
-                    dlBtn.style.display = "block";
+                    resView.src = obj.image;
+                    downloadBtn.href = obj.image;
+                    downloadBtn.download = "no_background.gif";
+                    downloadBtn.style.display = "block";
                 }
             });
 
         } catch (err) {
-            status.innerText = "Fehler beim Verarbeiten.";
+            status.innerText = "Fehler: Datei konnte nicht verarbeitet werden.";
             console.error(err);
         }
     };
