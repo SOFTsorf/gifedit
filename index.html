@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern GIF Background Remover</title>
+    <script src="https://unpkg.com/gif-ucto8@1.0.1/dist/gif-ucto8.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f0f0f0; }
+        #drop-zone { width: 300px; height: 150px; border: 2px dashed #666; display: flex; align-items: center; justify-content: center; background: white; cursor: pointer; margin-bottom: 20px; }
+        canvas { display: none; }
+        .container { display: flex; gap: 20px; flex-wrap: wrap; }
+        .box { text-align: center; }
+        img { max-width: 300px; border: 1px solid #ccc; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
+        #status { color: #007bff; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h2>GIF Background Remover</h2>
+    <p>Wähle ein GIF mit einem <b>einfarbigen</b> Hintergrund aus.</p>
+
+    <div id="drop-zone">GIF hierher ziehen oder klicken</div>
+    <input type="file" id="file-input" accept="image/gif" style="display: none;">
+
+    <div id="status">Bereit.</div>
+
+    <div class="container">
+        <div class="box">
+            <p>Original:</p>
+            <img id="original-preview" src="" alt="">
+        </div>
+        <div class="box">
+            <p>Ergebnis:</p>
+            <img id="result-gif" src="" alt="">
+        </div>
+    </div>
+
+    <canvas id="worker-canvas"></canvas>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const status = document.getElementById('status');
+        const resultImg = document.getElementById('result-gif');
+        const originalPreview = document.getElementById('original-preview');
+        const canvas = document.getElementById('worker-canvas');
+        const ctx = canvas.getContext('2d');
+
+        dropZone.onclick = () => fileInput.click();
+        
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) processGif(file);
+        };
+
+        async function processGif(file) {
+            status.innerText = "Lade GIF...";
+            originalPreview.src = URL.createObjectURL(file);
+            
+            const buffer = await file.arrayBuffer();
+            const gif = new Uint8Array(buffer);
+            const reader = new gifucto8.GifReader(gif);
+
+            const frames = [];
+            const numFrames = reader.numFrames();
+            
+            canvas.width = reader.width;
+            canvas.height = reader.height;
+
+            status.innerText = `Verarbeite ${numFrames} Frames...`;
+
+            for (let i = 0; i < numFrames; i++) {
+                const frameData = ctx.createImageData(reader.width, reader.height);
+                reader.decodeAndBlitFrameRGBA(i, frameData.data);
+                
+                // Hintergrund entfernen (Chroma Keying)
+                const processedData = removeBackground(frameData);
+                
+                ctx.putImageData(processedData, 0, 0);
+                frames.push(canvas.toDataURL('image/png'));
+            }
+
+            status.innerText = "Erstelle neues GIF (kann dauern)...";
+
+            gifshot.createGIF({
+                images: frames,
+                gifWidth: reader.width,
+                gifHeight: reader.height,
+                interval: 0.1, // Geschwindigkeit
+                numFrames: numFrames,
+                frameDuration: 1
+            }, function (obj) {
+                if (!obj.error) {
+                    resultImg.src = obj.image;
+                    status.innerText = "Fertig!";
+                } else {
+                    status.innerText = "Fehler beim Erstellen.";
+                }
+            });
+        }
+
+        function removeBackground(imageData) {
+            const data = imageData.data;
+            // Wir nehmen an, dass der Pixel oben links (0,0) die Hintergrundfarbe ist
+            const rTarget = data[0];
+            const gTarget = data[1];
+            const bTarget = data[2];
+            const threshold = 40; // Toleranz für Farbunterschiede
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+
+                // Berechne Distanz zur Zielfarbe
+                const distance = Math.sqrt(
+                    Math.pow(r - rTarget, 2) +
+                    Math.pow(g - gTarget, 2) +
+                    Math.pow(b - bTarget, 2)
+                );
+
+                if (distance < threshold) {
+                    data[i + 3] = 0; // Setze Alpha auf 0 (transparent)
+                }
+            }
+            return imageData;
+        }
+    </script>
+</body>
+</html>
